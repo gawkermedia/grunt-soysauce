@@ -1,7 +1,7 @@
 {
   "name": "grunt-soysauce",
-  "description": "Grunt task to compile Soy / Closure Templates",
-  "version": "0.3.0",
+  "description": "Grunt task to check and analyze Soy template and module JS files",
+  "version": "0.1.0",
   "homepage": "https://github.com/gawkermedia/grunt-soysauce",
   "author": {
     "name": "Jozsef Kozma",
