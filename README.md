@@ -1,9 +1,9 @@
-# soy-grunt-task
+# grunt-soysauce
 
 Grunt task to check and analyze Soy template and module JS files
 
 ## Getting Started
-Install this grunt plugin next to your project's [grunt.js gruntfile][getting_started] with: `npm install https://github.com/gawkermedia/grunt-soysauce/archive/v0.2.0.tar.gz --save-dev`
+Install this grunt plugin next to your project's [grunt.js gruntfile][getting_started] with: `npm install https://github.com/gawkermedia/grunt-soysauce/archive/v0.3.0.tar.gz --save-dev`
 
 Then add this line to your project's `grunt.js` gruntfile:
 

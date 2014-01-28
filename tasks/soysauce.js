@@ -1,6 +1,6 @@
 /*global module, require */
 /*
- * grunt-soy-grunt-task
+ * grunt-soysauce
  * https://github.com/gawkermedia/grunt-soysauce
  *
  * Copyright (c) 2014 Jozsef Kozma
@@ -138,8 +138,10 @@ module.exports = function (grunt) {
 
 	grunt.registerTask('soysauce:analyze', function () {
 		var counter = {
-				unused: 0,
-				missing: 0
+				defined: [],
+				called: [],
+				unused: [],
+				missing: []
 			},
 			report = function (minuend, subtrahend, sign, message) {
 				var difference = _.difference(minuend, subtrahend);
@@ -148,11 +150,6 @@ module.exports = function (grunt) {
 					_.each(_.unique(difference), function (template) {
 						grunt.log.writeln((sign.red + ' ' + template));
 					});
-					if (sign === '++') {
-						counter.unused += difference.length;
-					} else {
-						counter.missing += difference.length;
-					}
 				} else {
 					grunt.log.ok('No templates ' + message + '.');
 				}
@@ -194,14 +191,28 @@ module.exports = function (grunt) {
 		_.each(options.modules, function (module) {
 			var moduleTemplates = analyzeModule(module);
 
+			counter.defined = _.union(counter.defined, moduleTemplates.defined);
+			counter.called = _.union(counter.called, moduleTemplates.called);
+
 			grunt.log.subhead('=== ' + module + ' ===');
 			report(moduleTemplates.defined, moduleTemplates.called, '++', 'unused');
 			report(moduleTemplates.called, _.union(mainTemplates.defined, moduleTemplates.defined), '--', 'missing');
 		});
 
 		grunt.log.writeln();
-		if (counter.unused + counter.missing > 0) {
-			grunt.log.error(counter.unused + ' templates unused, ' + counter.missing + ' templates missing.');
+		counter.unused = _.difference(counter.defined, counter.called);
+		counter.missing = _.difference(counter.called, counter.defined);
+		if (counter.unused.length + counter.missing.length > 0) {
+			grunt.log.error(counter.unused.length + ' templates unused, ' + counter.missing.length + ' templates missing.');
+
+			_.each(['unused', 'missing'], function (status) {
+				if (counter[status].length > 0) {
+					grunt.log.subhead(counter[status].length + ' templates ' + status + ' project-wide?');
+					_.each(counter[status], function (template) {
+						grunt.log.writeln(template);
+					});
+				}
+			});
 		} else {
 			grunt.log.ok('All seems to be fine.');
 		}
