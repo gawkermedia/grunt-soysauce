@@ -141,14 +141,18 @@ module.exports = function (grunt) {
 				defined: [],
 				called: [],
 				unused: [],
-				missing: []
+				missing: [],
+				size: {}
 			},
-			report = function (minuend, subtrahend, sign, message) {
-				var difference = _.difference(minuend, subtrahend);
-				if (difference.length) {
+			report = function (templates, message) {
+				if (templates.length > 0) {
 					grunt.log.subhead('Templates ' + message + '?');
-					_.each(_.unique(difference), function (template) {
-						grunt.log.writeln((sign.red + ' ' + template));
+					_.each(templates, function (template) {
+						if (message === 'unused') {
+							grunt.log.writeln(Math.floor(counter.size[template] / 10.24) / 100 + ' KiB ' + template);
+						} else {
+							grunt.log.writeln('??'.red + ' ' + template);
+						}
 					});
 				} else {
 					grunt.log.ok('No templates ' + message + '.');
@@ -159,16 +163,20 @@ module.exports = function (grunt) {
 					lines = grunt.file.read(filename).split('\n'),
 					retval = {
 						defined: [],
-						called: []
+						called: [],
+						size: {}
 					},
 					defineRegExp = new RegExp('(.*) = function\\(opt_data, opt_sb, opt_ijData\\)'),
-					callRegExp = new RegExp('((' + options.namespaces.join('\\.|') + '\\.)[\.a-zA-Z0-9\-\_]+)', 'g');
+					callRegExp = new RegExp('((' + options.namespaces.join('\\.|') + '\\.)[\.a-zA-Z0-9\-\_]+)', 'g'),
+					countingTo = false;
 
 				_.each(lines, function (line) {
 					var match = line.match(defineRegExp);
 
 					if (match) {
 						retval.defined.push(match[1]);
+						countingTo = match[1];
+						retval.size[countingTo] = 0;
 					} else {
 						match = line.match(callRegExp);
 						if (match !== null) {
@@ -179,12 +187,23 @@ module.exports = function (grunt) {
 							});
 						}
 					}
+
+					if (countingTo) {
+						retval.size[countingTo] += line.length;
+					}
+
+					if (line.trim() === '};') {
+						countingTo = false;
+					}
 				});
 
 				retval.defined = _.unique(retval.defined.sort());
 				retval.called = _.unique(retval.called.sort());
 
 				return retval;
+			},
+			sizeSort = function (element) {
+				return -counter.size[element];
 			},
 			mainTemplates = analyzeModule(options.mainModule);
 
@@ -193,25 +212,21 @@ module.exports = function (grunt) {
 
 			counter.defined = _.union(counter.defined, moduleTemplates.defined);
 			counter.called = _.union(counter.called, moduleTemplates.called);
+			counter.size = _.extend(counter.size, moduleTemplates.size);
 
 			grunt.log.subhead('=== ' + module + ' ===');
-			report(moduleTemplates.defined, moduleTemplates.called, '++', 'unused');
-			report(moduleTemplates.called, _.union(mainTemplates.defined, moduleTemplates.defined), '--', 'missing');
+			report(_.sortBy(_.difference(moduleTemplates.defined, moduleTemplates.called), sizeSort), 'unused');
+			report(_.difference(moduleTemplates.called, _.union(mainTemplates.defined, moduleTemplates.defined)), 'missing');
 		});
 
 		grunt.log.writeln();
-		counter.unused = _.difference(counter.defined, counter.called);
+		counter.unused = _.sortBy(_.difference(counter.defined, counter.called), sizeSort);
 		counter.missing = _.difference(counter.called, counter.defined);
 		if (counter.unused.length + counter.missing.length > 0) {
 			grunt.log.error(counter.unused.length + ' templates unused, ' + counter.missing.length + ' templates missing.');
 
 			_.each(['unused', 'missing'], function (status) {
-				if (counter[status].length > 0) {
-					grunt.log.subhead(counter[status].length + ' templates ' + status + ' project-wide?');
-					_.each(counter[status], function (template) {
-						grunt.log.writeln(template);
-					});
-				}
+				report(counter[status], status);
 			});
 		} else {
 			grunt.log.ok('All seems to be fine.');
