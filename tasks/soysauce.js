@@ -37,6 +37,26 @@ module.exports = function (grunt) {
 		soyList = grunt.file.expand([
 			options.soySource + '/**/*.soy'
 		]),
+		addTemplate = function (mapping, namespace, filename, template) {
+			var node = namespace.shift();
+			if (!mapping[node]) {
+				mapping[node] = {};
+			}
+
+			if (namespace.length > 0) {
+				addTemplate(mapping[node], namespace, filename, template);
+			} else {
+				if (!mapping[node]._files) {
+					mapping[node]._files = {};
+				}
+
+				if (!mapping[node]._files[filename]) {
+					mapping[node]._files[filename] = [];
+				}
+
+				mapping[node]._files[filename].push(template);
+			}
+		},
 		lineReader = function (filename, mapping) {
 			return function (line) {
 				var match = line.match('{namespace (.*)}');
@@ -45,15 +65,7 @@ module.exports = function (grunt) {
 				} else {
 					match = line.match('{template .([a-zA-Z0-9_]*)');
 					if (match) {
-						if (!mapping.result[mapping.namespace]) {
-							mapping.result[mapping.namespace] = {};
-						}
-
-						if (!mapping.result[mapping.namespace][filename]) {
-							mapping.result[mapping.namespace][filename] = [];
-						}
-
-						mapping.result[mapping.namespace][filename].push(match[1]);
+						addTemplate(mapping.result, mapping.namespace.split('.'), filename, match[1]);
 					}
 				}
 			};
@@ -62,20 +74,11 @@ module.exports = function (grunt) {
 			_.each(grunt.file.read(filename).split('\n'), lineReader(filename, mapping));
 			return mapping;
 		},
-		templateFunctions = [],
 		namespaceFileTemplateMapping = function () {
 			var retval = _.reduce(soyList, fileReader, {
 				result: {},
 				namespace: {}
 			}).result;
-
-			templateFunctions = _.flatten(_.map(retval, function (namespaceData, namespace) {
-				return _.map(namespaceData, function (templates) {
-					return _.map(templates, function (template) {
-						return namespace + '.' + template;
-					});
-				});
-			}));
 
 			namespaceFileTemplateMapping = function () {
 				return retval;
@@ -90,28 +93,40 @@ module.exports = function (grunt) {
 				files: 0,
 				misplaced: 0
 			},
-			templateRenderer = function (templateName) {
-				grunt.log.writeln('\t\t.' + templateName);
+			tabs = function (indent) {
+				return new Array(indent).join('\t');
 			},
 			fileRenderer = function (namespace) {
 				return function (templateList, filename) {
-					var color = options.validateFilename(namespace, filename);
+					var color = options.validateFilename(namespace.join('.'), filename);
 					counter.files += 1;
 					if (color === 'red') {
 						counter.misplaced += 1;
 					}
 
-					grunt.log.writeln('\t' + filename[color]);
-					_.each(templateList, templateRenderer);
+					grunt.log.writeln(tabs(namespace.length + 1) + filename.replace(options.soySource + '/', '')[color]);
 				};
 			},
-			namespaceRenderer = function (fileList, namespace) {
-				counter.namespaces += 1;
-				grunt.log.subhead('=== ' + namespace + ' ===');
-				_.each(fileList, fileRenderer(namespace));
+			namespaceRenderer = function (namespace) {
+				var shadow;
+				return function (namespaceList, name) {
+					shadow = _.clone(namespace);
+
+					if (name !== '_files') {
+						shadow.push(name);
+						counter.namespaces += 1;
+						grunt.log.writeln(tabs(shadow.length) + name);
+
+						if (namespaceList._files) {
+							_.each(namespaceList._files, fileRenderer(shadow));
+						}
+
+						_.each(namespaceList, namespaceRenderer(shadow));
+					}
+				};
 			};
 
-		_.each(namespaceFileTemplateMapping(), namespaceRenderer);
+		_.each(namespaceFileTemplateMapping(), namespaceRenderer([]));
 
 		grunt.log.writeln();
 		if (counter.misplaced > 0) {
