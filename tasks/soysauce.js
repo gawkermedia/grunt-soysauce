@@ -114,10 +114,10 @@ module.exports = function (grunt) {
 
 					if (name !== '_files') {
 						shadow.push(name);
-						counter.namespaces += 1;
 						grunt.log.writeln(tabs(shadow.length) + name);
 
 						if (namespaceList._files) {
+							counter.namespaces += 1;
 							_.each(namespaceList._files, fileRenderer(shadow));
 						}
 
