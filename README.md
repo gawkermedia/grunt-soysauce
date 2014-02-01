@@ -1,9 +1,14 @@
 # grunt-soysauce
 
-Grunt task to check and analyze Soy template and module JS files
+A bunch of Grunt tasks to check and analyze Soy template and JS files.
+
+## Tasks
+- **soysauce:namespaces**: A task telling if your Soy namespaces align the folder and file structure of your Soy files. Files off are listed in red. Basic default rule is a Soy file in the `foo.bar.baz` namespace should either have the path `foo/bar/baz.soy` or `foo/bar/baz/whatever.soy`, but you can set up your own rules if you would like.
+- **soysauce:analyze-source**: A task telling how many of your Soy templates are unused in JS source files and how many of them are missing. Also telling if a Soy file used is overcrowded with templates - if it has more templates than used by the given JS files.
+- **soysauce:analyze-modules**: A task telling how many of your JS templates are unused in JS module files and how many of them are missing.
 
 ## Getting Started
-Install this grunt plugin next to your project's [grunt.js gruntfile][getting_started] with: `npm install https://github.com/gawkermedia/grunt-soysauce/archive/v0.3.1.tar.gz --save-dev`
+Install this grunt plugin with: `npm install https://github.com/gawkermedia/grunt-soysauce/archive/v0.4.0.tar.gz --save-dev`
 
 Then add this line to your project's `grunt.js` gruntfile:
 
@@ -11,48 +16,49 @@ Then add this line to your project's `grunt.js` gruntfile:
 grunt.loadNpmTasks('grunt-soysauce');
 ```
 
-Configure the soy task in your initConfig call (everything is optional, these are the defaults):
+## Configuration
+Configure the soy task in your initConfig call. You must set all options except `validateFilename`, that one is optional.
 
 ```javascript
 grunt.initConfig({
-    ...
-    soysauce: {
+	...
+	soysauce: {
 		options: {
-			// path for your Soy files
-			soySource: 'app/view/closure',
-			// path for your JS files packaged by require.js
-			jsTarget: 'target/scala2.10/classes/public/js-min'
-			// path of the module you always load if you have such one, relative to jsTarget
+			// Path for your Soy files.
+			soyPath: 'app/view/closure',
+			// Path for your JS files.
+			jsPath: 'target/scala2.10/classes/public/js-min',
+			// Path where your Soy/JS template files are generated to, relative to jsPath.
+			jsTemplateDir: 'templates',
+			// List of JS files you would like to analyze in soysauce:analyze-source task.
+			jsFiles: global.mantle.jsFilesExceptLib(),
+			// Path of the module you always load if you have such one, relative to jsPath.
 			mainModule: 'module/Main.js',
-			// all the modules you would like to analyze
+			// List of JS modules you would like to analyze in soysauce:analyze-modules task.
 			modules: [
 				'module/Main.js',
 				'module/foo.js',
 				'module/bar.js'
 			],
-			// top level namespaces used in your Soy files
+			// Top level namespaces used in your Soy files.
 			namespaces: [
 				'foo',
 				'bar'
 			],
-			// Your custom logic telling if a namespace-filename pair is ok or not. You
+			// Your custom logic telling if a namespace-filename pair is ok or not. Returns boolean.
 			validateFilename: function (namespace, filename) {
 				...
 				if (ok) {
-					return 'green';
+					return true;
 				} else {
-					return 'red';
+					return false;
 				}
 			}
-    	}
+		}
 	}
 	...
 });
 ```
-
-## Tasks
-- soysauce:mapping: task telling if your Soy namespaces align the folder and file structure of your Soy files
-- soysauce:analyze: task telling how many of your JS templates are ununsed in JS package files and how many of them are missing
 
 ## License
 Copyright (c) 2014 Gawker Media
