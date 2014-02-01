@@ -1,7 +1,7 @@
 {
   "name": "grunt-soysauce",
   "description": "Grunt task to check and analyze Soy template and module JS files",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "homepage": "https://github.com/gawkermedia/grunt-soysauce",
   "author": {
     "name": "Jozsef Kozma",
@@ -25,11 +25,11 @@
     "gruntplugin"
   ],
   "readmeFilename": "README.md",
-  "_id": "grunt-soysauce@0.3.1",
+  "_id": "grunt-soysauce@0.4.0",
   "dist": {
-    "shasum": "b523e0d89918b44ba7c5e4d680c92bcf59b43a84"
+    "shasum": "5f2c2d1c6aafffac6a76dd86b27065244d3fd420"
   },
-  "_resolved": "https://github.com/gawkermedia/grunt-soysauce/archive/v0.3.1.tar.gz",
-  "_from": "https://github.com/gawkermedia/grunt-soysauce/archive/v0.3.1.tar.gz",
-  "readme": "# grunt-soysauce\r\n\r\nGrunt task to check and analyze Soy template and module JS files\r\n\r\n## Getting Started\r\nInstall this grunt plugin next to your project's [grunt.js gruntfile][getting_started] with: `npm install https://github.com/gawkermedia/grunt-soysauce/archive/v0.3.1.tar.gz --save-dev`\r\n\r\nThen add this line to your project's `grunt.js` gruntfile:\r\n\r\n```javascript\r\ngrunt.loadNpmTasks('grunt-soysauce');\r\n```\r\n\r\nConfigure the soy task in your initConfig call (everything is optional, these are the defaults):\r\n\r\n```javascript\r\ngrunt.initConfig({\r\n    ...\r\n    soysauce: {\r\n\t\toptions: {\r\n\t\t\t// path for your Soy files\r\n\t\t\tsoySource: 'app/view/closure',\r\n\t\t\t// path for your JS files packaged by require.js\r\n\t\t\tjsTarget: 'target/scala2.10/classes/public/js-min'\r\n\t\t\t// path of the module you always load if you have such one, relative to jsTarget\r\n\t\t\tmainModule: 'module/Main.js',\r\n\t\t\t// all the modules you would like to analyze\r\n\t\t\tmodules: [\r\n\t\t\t\t'module/Main.js',\r\n\t\t\t\t'module/foo.js',\r\n\t\t\t\t'module/bar.js'\r\n\t\t\t],\r\n\t\t\t// top level namespaces used in your Soy files\r\n\t\t\tnamespaces: [\r\n\t\t\t\t'foo',\r\n\t\t\t\t'bar'\r\n\t\t\t],\r\n\t\t\t// Your custom logic telling if a namespace-filename pair is ok or not. You\r\n\t\t\tvalidateFilename: function (namespace, filename) {\r\n\t\t\t\t...\r\n\t\t\t\tif (ok) {\r\n\t\t\t\t\treturn 'green';\r\n\t\t\t\t} else {\r\n\t\t\t\t\treturn 'red';\r\n\t\t\t\t}\r\n\t\t\t}\r\n    \t}\r\n\t}\r\n\t...\r\n});\r\n```\r\n\r\n## Tasks\r\n- soysauce:mapping: task telling if your Soy namespaces align the folder and file structure of your Soy files\r\n- soysauce:analyze: task telling how many of your JS templates are ununsed in JS package files and how many of them are missing\r\n\r\n## License\r\nCopyright (c) 2014 Gawker Media\r\nLicensed under the MIT license.\r\n"
+  "_resolved": "https://github.com/gawkermedia/grunt-soysauce/archive/v0.4.0.tar.gz",
+  "_from": "https://github.com/gawkermedia/grunt-soysauce/archive/v0.4.0.tar.gz",
+  "readme": "# grunt-soysauce\r\n\r\nGrunt task to check and analyze Soy template and module JS files\r\n\r\n## Getting Started\r\nInstall this grunt plugin next to your project's [grunt.js gruntfile][getting_started] with: `npm install https://github.com/gawkermedia/grunt-soysauce/archive/v0.4.0.tar.gz --save-dev`\r\n\r\nThen add this line to your project's `grunt.js` gruntfile:\r\n\r\n```javascript\r\ngrunt.loadNpmTasks('grunt-soysauce');\r\n```\r\n\r\nConfigure the soy task in your initConfig call (everything is optional, these are the defaults):\r\n\r\n```javascript\r\ngrunt.initConfig({\r\n    ...\r\n    soysauce: {\r\n\t\toptions: {\r\n\t\t\t// path for your Soy files\r\n\t\t\tsoySource: 'app/view/closure',\r\n\t\t\t// path for your JS files packaged by require.js\r\n\t\t\tjsTarget: 'target/scala2.10/classes/public/js-min'\r\n\t\t\t// path of the module you always load if you have such one, relative to jsTarget\r\n\t\t\tmainModule: 'module/Main.js',\r\n\t\t\t// all the modules you would like to analyze\r\n\t\t\tmodules: [\r\n\t\t\t\t'module/Main.js',\r\n\t\t\t\t'module/foo.js',\r\n\t\t\t\t'module/bar.js'\r\n\t\t\t],\r\n\t\t\t// top level namespaces used in your Soy files\r\n\t\t\tnamespaces: [\r\n\t\t\t\t'foo',\r\n\t\t\t\t'bar'\r\n\t\t\t],\r\n\t\t\t// Your custom logic telling if a namespace-filename pair is ok or not. You\r\n\t\t\tvalidateFilename: function (namespace, filename) {\r\n\t\t\t\t...\r\n\t\t\t\tif (ok) {\r\n\t\t\t\t\treturn 'green';\r\n\t\t\t\t} else {\r\n\t\t\t\t\treturn 'red';\r\n\t\t\t\t}\r\n\t\t\t}\r\n    \t}\r\n\t}\r\n\t...\r\n});\r\n```\r\n\r\n## Tasks\r\n- soysauce:mapping: task telling if your Soy namespaces align the folder and file structure of your Soy files\r\n- soysauce:analyze: task telling how many of your JS templates are ununsed in JS package files and how many of them are missing\r\n\r\n## License\r\nCopyright (c) 2014 Gawker Media\r\nLicensed under the MIT license.\r\n"
 }
