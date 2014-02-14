@@ -216,8 +216,13 @@ module.exports = function (grunt) {
 			}()),
 			analyzeFile = function (path) {
 				var retval = {
-						unused: [],
-						missing: []
+						templates: {
+							missing: []
+						},
+						files: {
+							unused: [],
+							missing: []
+						}
 					},
 					lines = grunt.file.read(path).split('\n'),
 					requireRegExp = new RegExp(options.jsTemplateDir + '/([.a-zA-Z0-9-_/]+)'),
@@ -241,22 +246,29 @@ module.exports = function (grunt) {
 				});
 
 				neededFiles = _.unique(_.flatten(_.map(calledTemplates, function (template) {
-					var retval = _.map(templateTemplateMapping[template], function (subTemplate) {
+					var r = _.map(templateTemplateMapping[template], function (subTemplate) {
 						return templateFilenameMapping[subTemplate];
 					});
 
-					retval.push(templateFilenameMapping[template]);
+					if (templateFilenameMapping[template]) {
+						r.push(templateFilenameMapping[template]);
+					}
 
-					return retval;
+					return r;
 				})));
-				retval.unused = _.unique(_.difference(requiredFiles, neededFiles)).sort();
-				retval.missing = _.unique(_.difference(neededFiles, requiredFiles)).sort();
-				retval.overcrowded = _.unique(_.filter(neededFiles, function (filename) {
+
+				retval.files.unused = _.unique(_.difference(requiredFiles, neededFiles)).sort();
+				retval.files.missing = _.unique(_.difference(neededFiles, requiredFiles)).sort();
+				retval.files.overcrowded = _.unique(_.filter(neededFiles, function (filename) {
 					var allTemplates = _.flatten(_.union(calledTemplates, _.map(calledTemplates, function (template) {
 						return templateTemplateMapping[template];
 					})));
 					return _.difference(filenameTemplateMappig[filename], allTemplates).length > 0;
 				})).sort();
+
+				retval.templates.missing = _.filter(calledTemplates, function (template) {
+					return templateFilenameMapping[template] === undefined;
+				});
 
 				return retval;
 			};
@@ -264,12 +276,19 @@ module.exports = function (grunt) {
 		_.each(options.jsFiles, function (path) {
 			var fileData = analyzeFile(path);
 
-			if (fileData.unused.length + fileData.missing.length > 0) {
+			if (fileData.templates.missing.length + fileData.files.unused.length + fileData.files.missing.length + fileData.files.overcrowded.length > 0) {
 				bogus += 1;
 				grunt.log.subhead('=== ' + path + ' ===');
-				_.each(['unused', 'missing', 'overcrowded'], function (status) {
-					templateReport(fileData[status], 'Files', status);
-				});
+
+				if (fileData.templates.missing.length > 0) {
+					templateReport(fileData.templates.missing, 'Templates', 'missing');
+				}
+
+				if (fileData.files.unused.length + fileData.files.missing.length + fileData.files.overcrowded.length > 0) {
+					_.each(['unused', 'missing', 'overcrowded'], function (status) {
+						templateReport(fileData.files[status], 'Files', status);
+					});
+				}
 			}
 		});
 
