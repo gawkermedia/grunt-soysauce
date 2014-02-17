@@ -273,6 +273,8 @@ module.exports = function (grunt) {
 				return retval;
 			};
 
+		options.jsFiles = grunt.config('soysauce.options.jsFiles');
+
 		_.each(options.jsFiles, function (path) {
 			var fileData = analyzeFile(path);
 
