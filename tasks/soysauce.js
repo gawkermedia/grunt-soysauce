@@ -99,16 +99,25 @@ module.exports = function (grunt) {
 			return retval;
 		},
 		templateSize = {},
+		kibiBytes = function (bytes) {
+			return Math.floor(bytes / 10.24) / 100 + ' KiB';
+		},
 		templateReport = function (templates, resource, message) {
+			var sum = 0;
 			if (templates.length > 0) {
 				grunt.log.subhead('\t' + resource + ' ' + message + '?');
 				_.each(templates, function (template) {
 					if (templateSize[template]) {
-						grunt.log.writeln('\t' + Math.floor(templateSize[template] / 10.24) / 100 + ' KiB ' + template);
+						sum += templateSize[template];
+						grunt.log.writeln('\t' + kibiBytes(templateSize[template]) + ' ' + template);
 					} else {
 						grunt.log.writeln('\t' + template);
 					}
 				});
+
+				if (sum > 0 && message === 'unused') {
+					grunt.log.writeln('\tSum: ' + kibiBytes(sum));
+				}
 			}
 		};
 
