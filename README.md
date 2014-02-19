@@ -17,43 +17,51 @@ grunt.loadNpmTasks('grunt-soysauce');
 ```
 
 ## Configuration
-Configure the soy task in your initConfig call. You must set all options except `validateFilename`, that one is optional.
+Configure the soy task in your initConfig call. You must set all options except `soy.whiteList` and `soy.validateFilename`, those are optional.
 
 ```javascript
 grunt.initConfig({
 	...
 	soysauce: {
 		options: {
-			// Path for your Soy files.
-			soyPath: 'app/view/closure',
-			// Path for your JS files.
-			jsPath: 'target/scala2.10/classes/public/js-min',
-			// Path where your Soy/JS template files are generated to, relative to jsPath.
-			jsTemplateDir: 'templates',
-			// List of JS files you would like to analyze in soysauce:analyze-source task.
-			jsFiles: global.mantle.jsFilesExceptLib(),
-			// Path of the module you always load if you have such one, relative to jsPath.
-			mainModule: 'module/Main.js',
-			// List of JS modules you would like to analyze in soysauce:analyze-modules task.
-			modules: [
-				'module/Main.js',
-				'module/foo.js',
-				'module/bar.js'
-			],
+			soy: {
+				// Path for your Soy files.
+				path: 'app/view/closure',
+				// A list of files you don't want to get reported as overcrowded.
+				whiteList: [
+					'foo/bar.soy'
+				],
+				// Your custom logic telling if a namespace-filename pair is ok or not. Returns boolean.
+				validateFilename: function (namespace, filename) {
+					...
+					if (ok) {
+						return true;
+					} else {
+						return false;
+					}
+				}
+			},
+			js: {
+				// Path for your JS files.
+				path: 'target/scala2.10/classes/public/js-min',
+				// Path where your Soy/JS template files are generated to, relative to jsPath.
+				templateDir: 'templates',
+				// List of JS files you would like to analyze in soysauce:analyze-source task.
+				files: global.mantle.jsFilesExceptLib(),
+				// Path of the module you always load if you have such one, relative to jsPath.
+				mainModule: 'module/Main.js',
+				// List of JS modules you would like to analyze in soysauce:analyze-modules task.
+				modules: [
+					'module/Main.js',
+					'module/foo.js',
+					'module/bar.js'
+				]
+			},
 			// Top level namespaces used in your Soy files.
 			namespaces: [
 				'foo',
 				'bar'
-			],
-			// Your custom logic telling if a namespace-filename pair is ok or not. Returns boolean.
-			validateFilename: function (namespace, filename) {
-				...
-				if (ok) {
-					return true;
-				} else {
-					return false;
-				}
-			}
+			]
 		}
 	}
 	...

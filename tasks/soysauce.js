@@ -11,26 +11,33 @@
 
 var _ = require('underscore'),
 	defaults = {
-		validateFilename: function (namespace, filename) {
-			var patterns = (function () {
-					var namespaceParts = namespace.split('.');
+		soy: {
+			whiteList: [],
+			validateFilename: function (namespace, filename) {
+				var patterns = (function () {
+						var namespaceParts = namespace.split('.');
 
-					return [
-						namespaceParts.join('/') + '.soy',
-						namespaceParts.join('/') + '/([^/]+).soy'
-					];
-				}());
+						return [
+							namespaceParts.join('/') + '.soy',
+							namespaceParts.join('/') + '/([^/]+).soy'
+						];
+					}());
 
-			return _.find(patterns, function (pattern) {
-				return filename.match(pattern) !== null;
-			});
+				return _.find(patterns, function (pattern) {
+					return filename.match(pattern) !== null;
+				});
+			}
 		}
 	};
 
 module.exports = function (grunt) {
-	var options = _.extend(defaults, grunt.config('soysauce.options')),
+	var options = {
+			soy: _.extend(defaults.soy, grunt.config('soysauce.options.soy')),
+			js: grunt.config('soysauce.options.js'),
+			namespaces: grunt.config('soysauce.options.namespaces')
+		},
 		soyList = grunt.file.expand([
-			options.soyPath + '/**/*.soy'
+			options.soy.path + '/**/*.soy'
 		]),
 		addTemplate = function (mapping, namespace, filename, template, calledTemplate) {
 			var node = namespace.shift();
@@ -117,11 +124,11 @@ module.exports = function (grunt) {
 			fileRenderer = function (namespace) {
 				return function (templateList, filename) {
 					counter.files += 1;
-					if (options.validateFilename(namespace.join('.'), filename)) {
-						grunt.log.writeln(tabs(namespace.length + 1) + filename.replace(options.soyPath + '/', ''));
+					if (options.soy.validateFilename(namespace.join('.'), filename)) {
+						grunt.log.writeln(tabs(namespace.length + 1) + filename.replace(options.soy.path + '/', ''));
 					} else {
 						counter.misplaced += 1;
-						grunt.log.writeln(tabs(namespace.length + 1) + filename.replace(options.soyPath + '/', '').red);
+						grunt.log.writeln(tabs(namespace.length + 1) + filename.replace(options.soy.path + '/', '').red);
 					}
 				};
 			},
@@ -163,7 +170,7 @@ module.exports = function (grunt) {
 					if (namespaceData._files) {
 						_.each(namespaceData._files, function (templates, filename) {
 							_.each(templates, function (calledTemplates, template) {
-								retval[template] = filename.replace(options.soyPath + '/', '');
+								retval[template] = filename.replace(options.soy.path + '/', '');
 							});
 						});
 					}
@@ -225,7 +232,7 @@ module.exports = function (grunt) {
 						}
 					},
 					lines = grunt.file.read(path).split('\n'),
-					requireRegExp = new RegExp(options.jsTemplateDir + '/([.a-zA-Z0-9-_/]+)'),
+					requireRegExp = new RegExp(options.js.templateDir + '/([.a-zA-Z0-9-_/]+)'),
 					callRegExp = new RegExp('((' + options.namespaces.join('\\.|') + '\\.)[\\.a-zA-Z0-9\-\_]+)', 'g'),
 					requiredFiles = [],
 					calledTemplates = [],
@@ -259,12 +266,12 @@ module.exports = function (grunt) {
 
 				retval.files.unused = _.unique(_.difference(requiredFiles, neededFiles)).sort();
 				retval.files.missing = _.unique(_.difference(neededFiles, requiredFiles)).sort();
-				retval.files.overcrowded = _.unique(_.filter(neededFiles, function (filename) {
+				retval.files.overcrowded = _.difference(_.unique(_.filter(neededFiles, function (filename) {
 					var allTemplates = _.flatten(_.union(calledTemplates, _.map(calledTemplates, function (template) {
 						return templateTemplateMapping[template];
 					})));
 					return _.difference(filenameTemplateMappig[filename], allTemplates).length > 0;
-				})).sort();
+				})), options.soy.whiteList).sort();
 
 				retval.templates.missing = _.filter(calledTemplates, function (template) {
 					return templateFilenameMapping[template] === undefined;
@@ -273,9 +280,9 @@ module.exports = function (grunt) {
 				return retval;
 			};
 
-		options.jsFiles = grunt.config('soysauce.options.jsFiles');
+		options.js.files = grunt.config('soysauce.options.js.files');
 
-		_.each(options.jsFiles, function (path) {
+		_.each(options.js.files, function (path) {
 			var fileData = analyzeFile(path);
 
 			if (fileData.templates.missing.length + fileData.files.unused.length + fileData.files.missing.length + fileData.files.overcrowded.length > 0) {
@@ -296,9 +303,9 @@ module.exports = function (grunt) {
 
 		grunt.log.writeln();
 		if (bogus > 0) {
-			grunt.log.error(options.jsFiles.length + ' files processed, ' + bogus + ' files found with problems.');
+			grunt.log.error(options.js.files.length + ' files processed, ' + bogus + ' files found with problems.');
 		} else {
-			grunt.log.ok(options.jsFiles.length + ' files processed, all seems to be fine.');
+			grunt.log.ok(options.js.files.length + ' files processed, all seems to be fine.');
 		}
 	});
 
@@ -311,7 +318,7 @@ module.exports = function (grunt) {
 				size: {}
 			},
 			analyzeModule = function (module) {
-				var filename = options.jsPath + '/' + module,
+				var filename = options.js.path + '/' + module,
 					lines = grunt.file.read(filename).split('\n'),
 					retval = {
 						defined: [],
@@ -378,10 +385,10 @@ module.exports = function (grunt) {
 			sizeSort = function (element) {
 				return -templateSize[element];
 			},
-			mainTemplates = analyzeModule(options.mainModule),
+			mainTemplates = analyzeModule(options.js.mainModule),
 			bogus = 0;
 
-		_.each(options.modules, function (module) {
+		_.each(options.js.modules, function (module) {
 			var moduleTemplates = analyzeModule(module),
 				unused = _.sortBy(_.difference(moduleTemplates.defined, moduleTemplates.called), sizeSort),
 				missing = _.difference(moduleTemplates.called, _.union(mainTemplates.defined, moduleTemplates.defined)).sort();
@@ -400,9 +407,9 @@ module.exports = function (grunt) {
 
 		grunt.log.writeln();
 		if (bogus > 0) {
-			grunt.log.error(options.modules.length + ' files processed, ' + bogus + ' files found with problems.');
+			grunt.log.error(options.js.modules.length + ' files processed, ' + bogus + ' files found with problems.');
 		} else {
-			grunt.log.ok(options.modules.length + ' files processed, all seems to be fine.');
+			grunt.log.ok(options.js.modules.length + ' files processed, all seems to be fine.');
 		}
 	});
 };
