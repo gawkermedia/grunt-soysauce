@@ -188,7 +188,7 @@ module.exports = function (grunt) {
 				return retval;
 			},
 			templateFilenameMapping = _.reduce(namespaceFilenameTemplateMapping(), templateFilenameMapper, {}),
-			filenameTemplateMappig = _.reduce(templateFilenameMapping, function (retval, filename, template) {
+			filenameTemplateMapping = _.reduce(templateFilenameMapping, function (retval, filename, template) {
 				retval[filename] = retval[filename] || [];
 				retval[filename].push(template);
 
@@ -279,7 +279,7 @@ module.exports = function (grunt) {
 					var allTemplates = _.flatten(_.union(calledTemplates, _.map(calledTemplates, function (template) {
 						return templateTemplateMapping[template];
 					})));
-					return _.difference(filenameTemplateMappig[filename], allTemplates).length > 0;
+					return _.difference(filenameTemplateMapping[filename], allTemplates).length > 0;
 				})), options.soy.whiteList).sort();
 
 				retval.templates.missing = _.filter(calledTemplates, function (template) {
