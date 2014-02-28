@@ -40,15 +40,18 @@ module.exports = function (grunt) {
 		emptyCache = function () {
 			cache = {};
 		},
-		soyList = function () {
-			if (!cache.soyList) {
-				cache.soyList = grunt.file.expand([
-					options.soy.path + '/**/*.soy'
-				]);
+		cachedValue = function (key, generator) {
+			if (!cache[key]) {
+				cache[key] = generator();
 			}
 
-			return cache.soyList;
+			return cache[key];
 		},
+		soyList = cachedValue('soyList', function () {
+			return grunt.file.expand([
+				options.soy.path + '/**/*.soy'
+			]);
+		}),
 		addTemplate = function (mapping, namespace, filename, template, calledTemplate) {
 			var node = namespace.shift();
 			if (!mapping[node]) {
@@ -95,17 +98,13 @@ module.exports = function (grunt) {
 			_.each(grunt.file.read(filename).split('\n'), lineReader(filename, mapping));
 			return mapping;
 		},
-		namespaceFilenameTemplateMapping = function () {
-			if (!cache.namespaceFilenameTemplateMapping) {
-				cache.namespaceFilenameTemplateMapping = _.reduce(soyList(), soyFileReader, {
-					result: {},
-					currentNamespace: {},
-					currentTemplate: {}
-				}).result;
-			}
-
-			return cache.namespaceFilenameTemplateMapping;
-		},
+		namespaceFilenameTemplateMapping = cachedValue('namespaceFilenameTemplateMapping', function () {
+			return _.reduce(soyList(), soyFileReader, {
+				result: {},
+				currentNamespace: {},
+				currentTemplate: {}
+			}).result;
+		}),
 		templateSize = {},
 		kibiBytes = function (bytes) {
 			return Math.floor(bytes / 10.24) / 100 + ' KiB';
@@ -196,25 +195,17 @@ module.exports = function (grunt) {
 
 				return retval;
 			},
-			templateFilenameMapping = function () {
-				if (!cache.templateFilenameMapping) {
-					cache.templateFilenameMapping = _.reduce(namespaceFilenameTemplateMapping(), templateFilenameMapper, {});
-				}
+			templateFilenameMapping = cachedValue('templateFilenameMapping', function () {
+				return _.reduce(namespaceFilenameTemplateMapping(), templateFilenameMapper, {});
+			}),
+			filenameTemplateMapping = cachedValue('filenameTemplateMapping', function () {
+				return _.reduce(templateFilenameMapping(), function (retval, filename, template) {
+					retval[filename] = retval[filename] || [];
+					retval[filename].push(template);
 
-				return cache.templateFilenameMapping;
-			},
-			filenameTemplateMapping = function () {
-				if (!cache.filenameTemplateMapping) {
-					cache.filenameTemplateMapping = _.reduce(templateFilenameMapping(), function (retval, filename, template) {
-						retval[filename] = retval[filename] || [];
-						retval[filename].push(template);
-
-						return retval;
-					}, {});
-				}
-
-				return cache.filenameTemplateMapping;
-			},
+					return retval;
+				}, {});
+			}),
 			templateTemplateMapper = function (retval, namespaceData, namespace) {
 				if (_.isObject(namespaceData) && namespace !== '_files') {
 					_.reduce(namespaceData, templateTemplateMapper, retval);
@@ -229,34 +220,30 @@ module.exports = function (grunt) {
 
 				return retval;
 			},
-			templateTemplateMapping = function () {
-				if (!cache.templateTemplateMapping) {
-					cache.templateTemplateMapping = (function () {
-						var oneLevelMapping = _.reduce(namespaceFilenameTemplateMapping(), templateTemplateMapper, {}),
-							recursiveMapper = function (template) {
-								var retval = [
-									template
-								];
+			templateTemplateMapping = cachedValue('templateTemplateMapping', function () {
+				return (function () {
+					var oneLevelMapping = _.reduce(namespaceFilenameTemplateMapping(), templateTemplateMapper, {}),
+						recursiveMapper = function (template) {
+							var retval = [
+								template
+							];
 
-								if (oneLevelMapping[template]) {
-									retval = _.union(retval, _.map(oneLevelMapping[template], recursiveMapper));
-								}
-
-								return retval;
-							};
-
-						return _.reduce(oneLevelMapping, function (retval, calledTemplates, template) {
-							if (calledTemplates.length > 0) {
-								retval[template] = _.unique(_.flatten(_.map(calledTemplates, recursiveMapper)).sort());
+							if (oneLevelMapping[template]) {
+								retval = _.union(retval, _.map(oneLevelMapping[template], recursiveMapper));
 							}
 
 							return retval;
-						}, {});
-					}());
-				}
+						};
 
-				return cache.templateTemplateMapping;
-			},
+					return _.reduce(oneLevelMapping, function (retval, calledTemplates, template) {
+						if (calledTemplates.length > 0) {
+							retval[template] = _.unique(_.flatten(_.map(calledTemplates, recursiveMapper)).sort());
+						}
+
+						return retval;
+					}, {});
+				}());
+			}),
 			analyzeFile = function (path) {
 				var retval = {
 						templates: {
