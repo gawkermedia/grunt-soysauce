@@ -36,9 +36,19 @@ module.exports = function (grunt) {
 			js: grunt.config('soysauce.options.js'),
 			namespaces: grunt.config('soysauce.options.namespaces')
 		},
-		soyList = grunt.file.expand([
-			options.soy.path + '/**/*.soy'
-		]),
+		cache = {},
+		emptyCache = function () {
+			cache = {};
+		},
+		soyList = function () {
+			if (!cache.soyList) {
+				cache.soyList = grunt.file.expand([
+					options.soy.path + '/**/*.soy'
+				]);
+			}
+
+			return cache.soyList;
+		},
 		addTemplate = function (mapping, namespace, filename, template, calledTemplate) {
 			var node = namespace.shift();
 			if (!mapping[node]) {
@@ -86,17 +96,15 @@ module.exports = function (grunt) {
 			return mapping;
 		},
 		namespaceFilenameTemplateMapping = function () {
-			var retval = _.reduce(soyList, soyFileReader, {
-				result: {},
-				currentNamespace: {},
-				currentTemplate: {}
-			}).result;
+			if (!cache.namespaceFilenameTemplateMapping) {
+				cache.namespaceFilenameTemplateMapping = _.reduce(soyList(), soyFileReader, {
+					result: {},
+					currentNamespace: {},
+					currentTemplate: {}
+				}).result;
+			}
 
-			namespaceFilenameTemplateMapping = function () {
-				return retval;
-			};
-
-			return retval;
+			return cache.namespaceFilenameTemplateMapping;
 		},
 		templateSize = {},
 		kibiBytes = function (bytes) {
@@ -171,6 +179,7 @@ module.exports = function (grunt) {
 	});
 
 	grunt.registerTask('soysauce:analyze-source', function () {
+		emptyCache();
 
 		var bogus = 0,
 			templateFilenameMapper = function (retval, namespaceData, namespace) {
@@ -187,13 +196,25 @@ module.exports = function (grunt) {
 
 				return retval;
 			},
-			templateFilenameMapping = _.reduce(namespaceFilenameTemplateMapping(), templateFilenameMapper, {}),
-			filenameTemplateMapping = _.reduce(templateFilenameMapping, function (retval, filename, template) {
-				retval[filename] = retval[filename] || [];
-				retval[filename].push(template);
+			templateFilenameMapping = function () {
+				if (!cache.templateFilenameMapping) {
+					cache.templateFilenameMapping = _.reduce(namespaceFilenameTemplateMapping(), templateFilenameMapper, {});
+				}
 
-				return retval;
-			}, {}),
+				return cache.templateFilenameMapping;
+			},
+			filenameTemplateMapping = function () {
+				if (!cache.filenameTemplateMapping) {
+					cache.filenameTemplateMapping = _.reduce(templateFilenameMapping(), function (retval, filename, template) {
+						retval[filename] = retval[filename] || [];
+						retval[filename].push(template);
+
+						return retval;
+					}, {});
+				}
+
+				return cache.filenameTemplateMapping;
+			},
 			templateTemplateMapper = function (retval, namespaceData, namespace) {
 				if (_.isObject(namespaceData) && namespace !== '_files') {
 					_.reduce(namespaceData, templateTemplateMapper, retval);
@@ -208,28 +229,34 @@ module.exports = function (grunt) {
 
 				return retval;
 			},
-			templateTemplateMapping = (function () {
-				var oneLevelMapping = _.reduce(namespaceFilenameTemplateMapping(), templateTemplateMapper, {}),
-					recursiveMapper = function (template) {
-						var retval = [
-							template
-						];
+			templateTemplateMapping = function () {
+				if (!cache.templateTemplateMapping) {
+					cache.templateTemplateMapping = (function () {
+						var oneLevelMapping = _.reduce(namespaceFilenameTemplateMapping(), templateTemplateMapper, {}),
+							recursiveMapper = function (template) {
+								var retval = [
+									template
+								];
 
-						if (oneLevelMapping[template]) {
-							retval = _.union(retval, _.map(oneLevelMapping[template], recursiveMapper));
-						}
+								if (oneLevelMapping[template]) {
+									retval = _.union(retval, _.map(oneLevelMapping[template], recursiveMapper));
+								}
 
-						return retval;
-					};
+								return retval;
+							};
 
-				return _.reduce(oneLevelMapping, function (retval, calledTemplates, template) {
-					if (calledTemplates.length > 0) {
-						retval[template] = _.unique(_.flatten(_.map(calledTemplates, recursiveMapper)).sort());
-					}
+						return _.reduce(oneLevelMapping, function (retval, calledTemplates, template) {
+							if (calledTemplates.length > 0) {
+								retval[template] = _.unique(_.flatten(_.map(calledTemplates, recursiveMapper)).sort());
+							}
 
-					return retval;
-				}, {});
-			}()),
+							return retval;
+						}, {});
+					}());
+				}
+
+				return cache.templateTemplateMapping;
+			},
 			analyzeFile = function (path) {
 				var retval = {
 						templates: {
@@ -262,12 +289,12 @@ module.exports = function (grunt) {
 				});
 
 				neededFiles = _.unique(_.flatten(_.map(calledTemplates, function (template) {
-					var r = _.map(templateTemplateMapping[template], function (subTemplate) {
-						return templateFilenameMapping[subTemplate];
+					var r = _.map(templateTemplateMapping()[template], function (subTemplate) {
+						return templateFilenameMapping()[subTemplate];
 					});
 
-					if (templateFilenameMapping[template]) {
-						r.push(templateFilenameMapping[template]);
+					if (templateFilenameMapping()[template]) {
+						r.push(templateFilenameMapping()[template]);
 					}
 
 					return r;
@@ -277,13 +304,13 @@ module.exports = function (grunt) {
 				retval.files.missing = _.unique(_.difference(neededFiles, requiredFiles)).sort();
 				retval.files.overcrowded = _.difference(_.unique(_.filter(neededFiles, function (filename) {
 					var allTemplates = _.flatten(_.union(calledTemplates, _.map(calledTemplates, function (template) {
-						return templateTemplateMapping[template];
+						return templateTemplateMapping()[template];
 					})));
-					return _.difference(filenameTemplateMapping[filename], allTemplates).length > 0;
+					return _.difference(filenameTemplateMapping()[filename], allTemplates).length > 0;
 				})), options.soy.whiteList).sort();
 
 				retval.templates.missing = _.filter(calledTemplates, function (template) {
-					return templateFilenameMapping[template] === undefined;
+					return templateFilenameMapping()[template] === undefined;
 				});
 
 				return retval;
