@@ -113,7 +113,7 @@ module.exports = function (grunt) {
 		templateReport = function (templates, resource, message) {
 			var sum = 0;
 			if (templates.length > 0) {
-				grunt.log.subhead('\t' + resource + ' ' + message + '?');
+				grunt.log.subhead('\t' + resource + ' ' + message);
 				_.each(templates, function (template) {
 					if (templateSize[template]) {
 						sum += templateSize[template];
@@ -260,6 +260,8 @@ module.exports = function (grunt) {
 			analyzeFile = function (path) {
 				var retval = {
 						templates: {
+							called: [],
+							used: [],
 							missing: []
 						},
 						files: {
@@ -271,7 +273,6 @@ module.exports = function (grunt) {
 					requireRegExp = new RegExp(options.js.templateDir + '/([.a-zA-Z0-9-_/]+)'),
 					callRegExp = new RegExp('((' + options.namespaces.join('\\.|') + '\\.)[\\.a-zA-Z0-9\-\_]+)', 'g'),
 					requiredFiles = [],
-					calledTemplates = [],
 					neededFiles = [];
 
 				_.each(lines, function (line) {
@@ -282,16 +283,27 @@ module.exports = function (grunt) {
 						match = line.match(callRegExp);
 						if (match !== null) {
 							_.each(match, function (hit) {
-								calledTemplates.push(hit);
+								retval.templates.called.push(hit);
 							});
 						}
 					}
 				});
 
-				neededFiles = _.unique(_.flatten(_.map(calledTemplates, function (template) {
-					var r = _.map(templateTemplateMapping()[template], function (subTemplate) {
-						return templateFilenameMapping()[subTemplate];
-					});
+				// all the templates, either called by this code or by one of the templates called by this code
+				retval.templates.used = _.unique(_.flatten(_.map(retval.templates.called, function (template) {
+					var r = [
+						template
+					];
+
+					if (templateTemplateMapping()[template]) {
+						r.push(templateTemplateMapping()[template]);
+					}
+
+					return r;
+				})));
+
+				neededFiles = _.unique(_.flatten(_.map(retval.templates.used, function (template) {
+					var r = [];
 
 					if (templateFilenameMapping()[template]) {
 						r.push(templateFilenameMapping()[template]);
@@ -303,13 +315,10 @@ module.exports = function (grunt) {
 				retval.files.unused = _.unique(_.difference(requiredFiles, neededFiles)).sort();
 				retval.files.missing = _.unique(_.difference(neededFiles, requiredFiles)).sort();
 				retval.files.overcrowded = _.difference(_.unique(_.filter(neededFiles, function (filename) {
-					var allTemplates = _.flatten(_.union(calledTemplates, _.map(calledTemplates, function (template) {
-						return templateTemplateMapping()[template];
-					})));
-					return _.difference(filenameTemplateMapping()[filename], allTemplates).length > 0;
+					return _.difference(filenameTemplateMapping()[filename], retval.templates.used).length > 0;
 				})), options.soy.whiteList).sort();
 
-				retval.templates.missing = _.filter(calledTemplates, function (template) {
+				retval.templates.missing = _.filter(retval.templates.used, function (template) {
 					return templateFilenameMapping()[template] === undefined;
 				});
 
@@ -324,6 +333,8 @@ module.exports = function (grunt) {
 			if (fileData.templates.missing.length + fileData.files.unused.length + fileData.files.missing.length + fileData.files.overcrowded.length > 0) {
 				bogus += 1;
 				grunt.log.subhead('=== ' + path + ' ===');
+
+				templateReport(fileData.templates.used, 'Templates', 'used');
 
 				if (fileData.templates.missing.length > 0) {
 					templateReport(fileData.templates.missing, 'Templates', 'missing');
