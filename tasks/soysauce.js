@@ -106,6 +106,27 @@ module.exports = function (grunt) {
 
 			return cache.namespaceFilenameTemplateMapping;
 		},
+		templateFilenameMapper = function (retval, namespaceData, namespace) {
+			if (_.isObject(namespaceData) && namespace !== '_files') {
+				_.reduce(namespaceData, templateFilenameMapper, retval);
+				if (namespaceData._files) {
+					_.each(namespaceData._files, function (templates, filename) {
+						_.each(templates, function (calledTemplates, template) {
+							retval[template] = filename.replace(options.soy.path + '/', '');
+						});
+					});
+				}
+			}
+
+			return retval;
+		},
+		templateFilenameMapping = function () {
+			if (!cache.templateFilenameMapping) {
+				cache.templateFilenameMapping = _.reduce(namespaceFilenameTemplateMapping(), templateFilenameMapper, {});
+			}
+
+			return cache.templateFilenameMapping;
+		},
 		templateSize = {},
 		kibiBytes = function (bytes) {
 			return (bytes / 1024).toFixed(2) + ' KiB';
@@ -182,27 +203,6 @@ module.exports = function (grunt) {
 		emptyCache();
 
 		var bogus = 0,
-			templateFilenameMapper = function (retval, namespaceData, namespace) {
-				if (_.isObject(namespaceData) && namespace !== '_files') {
-					_.reduce(namespaceData, templateFilenameMapper, retval);
-					if (namespaceData._files) {
-						_.each(namespaceData._files, function (templates, filename) {
-							_.each(templates, function (calledTemplates, template) {
-								retval[template] = filename.replace(options.soy.path + '/', '');
-							});
-						});
-					}
-				}
-
-				return retval;
-			},
-			templateFilenameMapping = function () {
-				if (!cache.templateFilenameMapping) {
-					cache.templateFilenameMapping = _.reduce(namespaceFilenameTemplateMapping(), templateFilenameMapper, {});
-				}
-
-				return cache.templateFilenameMapping;
-			},
 			filenameTemplateMapping = function () {
 				if (!cache.filenameTemplateMapping) {
 					cache.filenameTemplateMapping = _.reduce(templateFilenameMapping(), function (retval, filename, template) {
@@ -437,7 +437,9 @@ module.exports = function (grunt) {
 
 		_.each(options.js.modules, function (module) {
 			var moduleTemplates = analyzeModule(module),
-				unused = _.sortBy(_.difference(moduleTemplates.defined, moduleTemplates.called), sizeSort),
+				unused = _.sortBy(_.filter(_.difference(moduleTemplates.defined, moduleTemplates.called), function (template) {
+					return !_.contains(options.soy.whiteList, templateFilenameMapping()[template]);
+				}), sizeSort),
 				missing = _.difference(moduleTemplates.called, _.union(mainTemplates.defined, moduleTemplates.defined)).sort();
 
 			counter.defined = _.union(counter.defined, moduleTemplates.defined);
