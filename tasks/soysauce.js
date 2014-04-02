@@ -108,7 +108,7 @@ module.exports = function (grunt) {
 		},
 		templateSize = {},
 		kibiBytes = function (bytes) {
-			return Math.floor(bytes / 10.24) / 100 + ' KiB';
+			return (bytes / 1024).toFixed(2) + ' KiB';
 		},
 		templateReport = function (templates, resource, message) {
 			var sum = 0;
