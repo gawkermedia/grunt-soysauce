@@ -334,15 +334,15 @@ module.exports = function (grunt) {
 				bogus += 1;
 				grunt.log.subhead('=== ' + path + ' ===');
 
-				templateReport(fileData.templates.used, 'Templates', 'used');
+				templateReport(fileData.templates.used.sort(), 'Templates', 'used');
 
 				if (fileData.templates.missing.length > 0) {
-					templateReport(fileData.templates.missing, 'Templates', 'missing');
+					templateReport(fileData.templates.missing.sort(), 'Templates', 'missing');
 				}
 
 				if (fileData.files.unused.length + fileData.files.missing.length + fileData.files.overcrowded.length > 0) {
 					_.each(['unused', 'missing', 'overcrowded'], function (status) {
-						templateReport(fileData.files[status], 'Files', status);
+						templateReport(fileData.files[status].sort(), 'Files', status);
 					});
 				}
 			}
@@ -447,8 +447,8 @@ module.exports = function (grunt) {
 			if (unused.length + missing.length > 0) {
 				bogus += 1;
 				grunt.log.subhead('=== ' + module + ' ===');
-				templateReport(unused, 'Templates', 'unused');
-				templateReport(missing, 'Templates', 'missing');
+				templateReport(unused.sort(), 'Templates', 'unused');
+				templateReport(missing.sort(), 'Templates', 'missing');
 			}
 		});
 
