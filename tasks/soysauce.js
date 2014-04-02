@@ -300,7 +300,7 @@ module.exports = function (grunt) {
 					}
 
 					return r;
-				})));
+				}))).sort();
 
 				neededFiles = _.unique(_.flatten(_.map(retval.templates.used, function (template) {
 					var r = [];
