@@ -27,6 +27,10 @@ var _ = require('underscore'),
 					return filename.match(pattern) !== null;
 				});
 			}
+		},
+		reports: {
+			namespaces: '',
+			analyzeSource: ''
 		}
 	};
 
@@ -34,7 +38,8 @@ module.exports = function (grunt) {
 	var options = {
 			soy: _.extend(defaults.soy, grunt.config('soysauce.options.soy')),
 			js: grunt.config('soysauce.options.js'),
-			namespaces: grunt.config('soysauce.options.namespaces')
+			namespaces: grunt.config('soysauce.options.namespaces'),
+			reports: grunt.config('soysauce.options.reports')
 		},
 		cache = {},
 		emptyCache = function () {
@@ -148,6 +153,15 @@ module.exports = function (grunt) {
 					grunt.log.writeln('\tSum: ' + kibiBytes(sum));
 				}
 			}
+		},
+		xmlReport = function (content, reportPath) {
+			var out = [
+				'<?xml version=\"1.0\" encoding=\"utf-8\"?>',
+				'<soysauce>',
+				content,
+				'</soysauce>'
+			];
+			grunt.file.write(reportPath, out.join("\n"));
 		};
 
 	grunt.registerTask('soysauce:namespaces', function () {
@@ -187,7 +201,8 @@ module.exports = function (grunt) {
 						_.each(namespaceList, namespaceRenderer(shadow));
 					}
 				};
-			};
+			},
+			out = [];
 
 		_.each(namespaceFilenameTemplateMapping(), namespaceRenderer([]));
 
@@ -196,6 +211,10 @@ module.exports = function (grunt) {
 			grunt.log.error(counter.files + ' files in ' + counter.namespaces + ' namespaces, ' + counter.misplaced + ' files misplaced.');
 		} else {
 			grunt.log.ok(counter.files + ' files in ' + counter.namespaces + ' namespaces, all seems to be fine.');
+		}
+
+		if (options.reports.namespaces && options.reports.namespaces !== '') {
+			xmlReport('<namespaces files="' + counter.files + '" misplaced="' + counter.misplaced + '" />', options.reports.namespaces);
 		}
 	});
 
@@ -353,6 +372,10 @@ module.exports = function (grunt) {
 			grunt.log.error(options.js.files.length + ' files processed, ' + bogus + ' files found with problems.');
 		} else {
 			grunt.log.ok(options.js.files.length + ' files processed, all seems to be fine.');
+		}
+
+		if (options.reports.analyzeSource && options.reports.analyzeSource !== '') {
+			xmlReport('<analyze-source files="' + options.js.files.length + '" bogus="' + bogus + '" />', options.reports.analyzeSource);
 		}
 	});
 
