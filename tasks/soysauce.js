@@ -167,6 +167,12 @@ module.exports = function (grunt) {
 				}
 			}
 		},
+		dependencyReport = function (items, message) {
+			templateReport(_.map(items, function (item) {
+				return options.js.templateDir + '/' + item.replace('.soy', '');
+			}), 'Dependencies', message);
+
+		},
 		xmlReport = function (content, reportPath) {
 			var out = [
 				'<?xml version=\"1.0\" encoding=\"utf-8\"?>',
@@ -373,9 +379,11 @@ module.exports = function (grunt) {
 				}
 
 				if (fileData.files.unused.length + fileData.files.missing.length + fileData.files.overcrowded.length > 0) {
-					_.each(['unused', 'missing', 'overcrowded'], function (status) {
-						templateReport(fileData.files[status].sort(), 'Files', status);
+					_.each(['unused', 'missing'], function (status) {
+						dependencyReport(fileData.files[status].sort(), status);
 					});
+
+					templateReport(fileData.files.overcrowded, 'Files', 'overcrowded')
 				}
 			}
 		});
