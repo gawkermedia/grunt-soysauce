@@ -75,22 +75,35 @@ module.exports = function (grunt) {
 			}
 		},
 		lineReader = function (filename, mapping) {
+			var delPackage = '';
 			return function (line) {
-				var match = line.match('{namespace (.*)}');
-				if (match) {
-					mapping.currentNamespace = match[1];
-				} else {
-					match = line.match('{(template|call) ([.a-zA-Z0-9_]*)');
-					if (match) {
-						if (match[2].substr(0, 1) === '.') {
-							match[2] = mapping.currentNamespace + match[2];
-						}
+				var match = line.match('{delpackage (.*)}');
 
-						if (match[1] === 'template') {
-							mapping.currentTemplate = match[2];
-							addTemplate(mapping.result, mapping.currentNamespace.split('.'), filename, mapping.currentTemplate);
+				if (match) {
+					delPackage = match[1];
+				} else {
+					match = line.match('{namespace (.*)}');
+					if (match) {
+						if (delPackage === '') {
+							mapping.currentNamespace = match[1];
 						} else {
-							addTemplate(mapping.result, mapping.currentNamespace.split('.'), filename, mapping.currentTemplate, match[2]);
+							mapping.currentNamespace = match[1].split('.').splice(1);
+							mapping.currentNamespace.unshift(delPackage);
+							mapping.currentNamespace = mapping.currentNamespace.join('.');
+						}
+					} else {
+						match = line.match('{(template|call) ([.a-zA-Z0-9_]*)');
+						if (match) {
+							if (match[2].substr(0, 1) === '.') {
+								match[2] = mapping.currentNamespace + match[2];
+							}
+
+							if (match[1] === 'template') {
+								mapping.currentTemplate = match[2];
+								addTemplate(mapping.result, mapping.currentNamespace.split('.'), filename, mapping.currentTemplate);
+							} else {
+								addTemplate(mapping.result, mapping.currentNamespace.split('.'), filename, mapping.currentTemplate, match[2]);
+							}
 						}
 					}
 				}
