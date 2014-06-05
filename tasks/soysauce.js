@@ -12,6 +12,7 @@
 var _ = require('underscore'),
 	defaults = {
 		soy: {
+			maxRecursionDepth: 100,
 			whiteList: [],
 			validateFilename: function (namespace, filename) {
 				var patterns = (function () {
@@ -271,13 +272,24 @@ module.exports = function (grunt) {
 				if (!cache.templateTemplateMapping) {
 					cache.templateTemplateMapping = (function () {
 						var oneLevelMapping = _.reduce(namespaceFilenameTemplateMapping(), templateTemplateMapper, {}),
-							recursiveMapper = function (template) {
+							recursiveMapper = function (template, depth) {
 								var retval = [
-									template
-								];
+										template
+									],
+									recursiveMapperWithDepth;
+
+								if (!depth) {
+									depth = 0;
+								} else if (depth >= options.soy.maxRecursionDepth) {
+									grunt.log('Maxiumum depth exceeded, possible circular dependency');
+									return retval;
+								}
+
+								// Limit recursion to specified maximum depth
+								recursiveMapperWithDepth = _.partial(recursiveMapper, _, depth++);
 
 								if (oneLevelMapping[template]) {
-									retval = _.union(retval, _.map(oneLevelMapping[template], recursiveMapper));
+									retval = _.union(retval, _.map(oneLevelMapping[template], recursiveMapperWithDepth));
 								}
 
 								return retval;
