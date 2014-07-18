@@ -92,13 +92,13 @@ module.exports = function (grunt) {
 							mapping.currentNamespace = mapping.currentNamespace.join('.');
 						}
 					} else {
-						match = line.match('{(template|call) ([.a-zA-Z0-9_]*)');
+						match = line.match('{(template|deltemplate|call|delcall) ([.a-zA-Z0-9_]*)');
 						if (match) {
 							if (match[2].substr(0, 1) === '.') {
 								match[2] = mapping.currentNamespace + match[2];
 							}
 
-							if (match[1] === 'template') {
+							if (_.contains(['template', 'deltemplate'], match[1])) {
 								mapping.currentTemplate = match[2];
 								addTemplate(mapping.result, mapping.currentNamespace.split('.'), filename, mapping.currentTemplate);
 							} else {
