@@ -92,13 +92,13 @@ module.exports = function (grunt) {
 							mapping.currentNamespace = mapping.currentNamespace.join('.');
 						}
 					} else {
-						match = line.match('{(template|call) ([.a-zA-Z0-9_]*)');
+						match = line.match('{(template|deltemplate|call|delcall) ([.a-zA-Z0-9_]*)');
 						if (match) {
 							if (match[2].substr(0, 1) === '.') {
 								match[2] = mapping.currentNamespace + match[2];
 							}
 
-							if (match[1] === 'template') {
+							if (_.contains(['template', 'deltemplate'], match[1])) {
 								mapping.currentTemplate = match[2];
 								addTemplate(mapping.result, mapping.currentNamespace.split('.'), filename, mapping.currentTemplate);
 							} else {
@@ -271,21 +271,36 @@ module.exports = function (grunt) {
 				if (!cache.templateTemplateMapping) {
 					cache.templateTemplateMapping = (function () {
 						var oneLevelMapping = _.reduce(namespaceFilenameTemplateMapping(), templateTemplateMapper, {}),
-							recursiveMapper = function (template) {
-								var retval = [
-									template
-								];
+							recursiveMapper = function (pathSoFar) {
+								return function (template) {
+									var retval = [
+										template
+									];
 
-								if (oneLevelMapping[template]) {
-									retval = _.union(retval, _.map(oneLevelMapping[template], recursiveMapper));
-								}
+									if (_.contains(pathSoFar, template)) {
+										grunt.log.error('Possible circular template dependency starting at ' + template + '. Templates called so far:');
+										pathSoFar.push(template);
+										grunt.log.writeln(_.map(pathSoFar, function (actualTemplate) {
+											if (template === actualTemplate) {
+												return template.red;
+											} else {
+												return actualTemplate;
+											}
+										}).join(' => '));
+										pathSoFar.pop();
+									} else if (oneLevelMapping[template]) {
+										pathSoFar.push(template);
+										retval = _.union(retval, _.map(oneLevelMapping[template], recursiveMapper(pathSoFar)));
+										pathSoFar.pop();
+									}
 
-								return retval;
+									return retval;
+								};
 							};
 
 						return _.reduce(oneLevelMapping, function (retval, calledTemplates, template) {
 							if (calledTemplates.length > 0) {
-								retval[template] = _.unique(_.flatten(_.map(calledTemplates, recursiveMapper)).sort());
+								retval[template] = _.unique(_.flatten(_.map(calledTemplates, recursiveMapper([]))).sort());
 							}
 
 							return retval;
