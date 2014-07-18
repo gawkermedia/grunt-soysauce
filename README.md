@@ -8,7 +8,7 @@ A bunch of Grunt tasks to check and analyze Soy template and JS files.
 - **soysauce:analyze-modules**: A task telling how many of your JS templates are unused in JS module files and how many of them are missing.
 
 ## Getting Started
-Install this grunt plugin with: `npm install https://github.com/gawkermedia/grunt-soysauce/archive/v0.4.11.tar.gz --save-dev`
+Install this grunt plugin with: `npm install https://github.com/gawkermedia/grunt-soysauce/archive/v0.4.13.tar.gz --save-dev`
 
 Then add this line to your project's `grunt.js` gruntfile:
 
