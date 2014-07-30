@@ -240,7 +240,14 @@ module.exports = function (grunt) {
 	grunt.registerTask('soysauce:analyze-source', function () {
 		emptyCache();
 
-		var bogus = 0,
+		var	xmlFields = {
+				files: 0,
+				bogus: 0,
+				templatesMissing: 0,
+				dependenciesMissing: 0,
+				dependenciesUnused: 0,
+				filesOvercrowded: 0
+			},
 			filenameTemplateMapping = function () {
 				if (!cache.filenameTemplateMapping) {
 					cache.filenameTemplateMapping = _.reduce(templateFilenameMapping(), function (retval, filename, template) {
@@ -379,12 +386,17 @@ module.exports = function (grunt) {
 			};
 
 		options.js.files = grunt.config('soysauce.options.js.files');
+		xmlFields.files = options.js.files.length;
 
 		_.each(options.js.files, function (path) {
 			var fileData = analyzeFile(path);
 
 			if (fileData.templates.missing.length + fileData.files.unused.length + fileData.files.missing.length + fileData.files.overcrowded.length > 0) {
-				bogus += 1;
+				xmlFields.bogus += 1;
+				xmlFields.templatesMissing += fileData.templates.missing.length;
+				xmlFields.dependenciesMissing += fileData.files.missing.length;
+				xmlFields.dependenciesUnused += fileData.files.unused.length;
+				xmlFields.filesOvercrowded += fileData.files.overcrowded.length;
 				grunt.log.subhead('=== ' + path + ' ===');
 
 				templateReport(fileData.templates.used.sort(), 'Templates', 'used');
@@ -404,14 +416,16 @@ module.exports = function (grunt) {
 		});
 
 		grunt.log.writeln();
-		if (bogus > 0) {
-			grunt.log.error(options.js.files.length + ' files processed, ' + bogus + ' files found with problems.');
+		if (xmlFields.bogus > 0) {
+			grunt.log.error(options.js.files.length + ' files processed, ' + xmlFields.bogus + ' files found with problems.');
 		} else {
 			grunt.log.ok(options.js.files.length + ' files processed, all seems to be fine.');
 		}
 
 		if (options.reports.analyzeSource && options.reports.analyzeSource !== '') {
-			xmlReport('<analyze-source files="' + options.js.files.length + '" bogus="' + bogus + '" />', options.reports.analyzeSource);
+			xmlReport('<analyze-source ' + _.map(xmlFields, function (value, key) {
+				return key + '="' + value + '"';
+			}).join(" ") + '/>', options.reports.analyzeSource);
 		}
 	});
 
