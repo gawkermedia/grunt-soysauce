@@ -130,7 +130,8 @@ module.exports = function (grunt) {
 				if (namespaceData._files) {
 					_.each(namespaceData._files, function (templates, filename) {
 						_.each(templates, function (calledTemplates, template) {
-							retval[template] = filename.replace(options.soy.path + '/', '');
+							retval[template] = retval[template] || [];
+							retval[template].push(filename.replace(options.soy.path + '/', ''));
 						});
 					});
 				}
@@ -250,9 +251,11 @@ module.exports = function (grunt) {
 			},
 			filenameTemplateMapping = function () {
 				if (!cache.filenameTemplateMapping) {
-					cache.filenameTemplateMapping = _.reduce(templateFilenameMapping(), function (retval, filename, template) {
-						retval[filename] = retval[filename] || [];
-						retval[filename].push(template);
+					cache.filenameTemplateMapping = _.reduce(templateFilenameMapping(), function (retval, filenames, template) {
+						_.each(filenames, function (filename) {
+							retval[filename] = retval[filename] || [];
+							retval[filename].push(template);
+						});
 
 						return retval;
 					}, {});
